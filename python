@@ -1,0 +1,124 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+alldata = pd.read_csv('Data/xeek_train_subset.csv')
+data = alldata.loc[alldata['WELL'] == '16/10-1'][['DEPTH_MD', 'GR', 'RHOB', 'NPHI', 'FORCE_2020_LITHOFACIES_LITHOLOGY']]
+
+data.rename(columns={'FORCE_2020_LITHOFACIES_LITHOLOGY': 'LITHOLOGY'}, inplace=True)
+data.head()
+
+lithology_numbers = {30000: {'lith': 'Sandstone', 'lith_num': 1, 'hatch': '..', 'color': '#ffff00'},
+                     65030: {'lith': 'Sandstone/Shale', 'lith_num': 2, 'hatch': '-.', 'color': '#ffe119'},
+                     65000: {'lith': 'Shale', 'lith_num': 3, 'hatch': '--', 'color': '#bebebe'},
+                     80000: {'lith': 'Marl', 'lith_num': 4, 'hatch': '', 'color': '#7cfc00'},
+                     74000: {'lith': 'Dolomite', 'lith_num': 5, 'hatch': '-/', 'color': '#8080ff'},
+                     70000: {'lith': 'Limestone', 'lith_num': 6, 'hatch': '+', 'color': '#80ffff'},
+                     70032: {'lith': 'Chalk', 'lith_num': 7, 'hatch': '..', 'color': '#80ffff'},
+                     88000: {'lith': 'Halite', 'lith_num': 8, 'hatch': 'x', 'color': '#7ddfbe'},
+                     86000: {'lith': 'Anhydrite', 'lith_num': 9, 'hatch': '', 'color': '#ff80ff'},
+                     99000: {'lith': 'Tuff', 'lith_num': 10, 'hatch': '||', 'color': '#ff8c00'},
+                     90000: {'lith': 'Coal', 'lith_num': 11, 'hatch': '', 'color': 'black'},
+                     93000: {'lith': 'Basement', 'lith_num': 12, 'hatch': '-|', 'color': '#ef138a'}}
+
+df_lith = pd.DataFrame.from_dict(lithology_numbers, orient='index')
+df_lith.index.name = 'LITHOLOGY'
+fig,axes = plt.subplots(ncols=4, nrows=3, sharex=True, sharey=True, size=(10, 5), subplot_kw={"xticks": [], "yticks": []})
+
+y = [0, 1]
+x = [1, 1]
+
+for ax, key in zip(axes.flat, lithology_numbers.keys()):
+    ax.plot(x, y)
+    ax.fill_betweenx(y, 0, 1, facecolor=lithology_numbers[key]['color'], hatch=lithology_numbers[key]['hatch'])
+    ax.set_xlim(0, 0.1)
+    ax.set_ylim(0, 1)
+    ax.set_title(str(lithology_numbers[key]['lith']))
+
+plt.tight_layout()
+plt.show()
+fig.axes = plt.subplots(figsize=(15, 10))
+
+   # Set up the plot axes
+axes1 = plt.subplot2grid((1, 3), (0, 0), rowspan=1, colspan=1)
+axes2 = plt.subplot2grid((1, 3), (0, 1), rowspan=1, colspan=1, sharey=axes1)
+axes3 = axes2.twiny()  # Twins the y-axis for the density track with the neutron track
+axes4 = plt.subplot2grid((1, 3), (0, 2), rowspan=1, colspan=1, sharey=axes1)
+
+    # As our curve scales will be detached from the top of the track,
+    # this code adds the top border back in without dealing with splines
+axes10 = axes1.twiny()
+axes10.xaxis.set_visible(False)
+axes11 = axes2.twiny()
+axes11.xaxis.set_visible(False)
+axes13 = axes4.twiny()
+axes13.xaxis.set_visible(False)
+
+    # Gamma Ray track
+axes1.plot(["GR"], ['DEPTH_MD'], color="green", linewidth=0.5)
+axes1.set_xlabel("Gamma")
+axes1.xaxis.label.set_color("green")
+axes1.set_xlim(0, 200)
+axes1.set_ylabel("Depth (m)")
+axes1.tick_params(axis='x', colors="green")
+axes1.spines["top"].set_edgecolor("green")
+axes1.title.set_color('green')
+axes1.set_xticks([0, 50, 100, 150, 200])
+
+    # Density trace
+axes2.plot(["RHOB"], ['DEPTH_MD'], color="red", linewidth=0.5)
+axes2.set_xlabel("Density")
+axes2.set_xlim(1.95, 2.95)
+axes2.xaxis.label.set_color("red")
+axes2.tick_params(axis='x', colors="red")
+axes2.spines["top"].set_edgecolor("red")
+axes2.set_xticks([1.95, 2.45, 2.95])
+
+    # Neutron track placed ontop of density track
+axes3.plot(["NPHI"], ['DEPTH_MD'], color="blue", linewidth=0.5)
+axes3.set_xlabel('Neutron')
+axes3.xaxis.label.set_color("blue")
+axes3.set_xlim(0.45, -0.15)
+axes3.tick_params(axis='x', colors="blue")
+axes3.spines["top"].set_position(("axes", 1.08))
+axes3.spines["top"].set_visible(True)
+axes3.spines["top"].set_edgecolor("blue")
+axes3.set_xticks([0.45, 0.15, -0.15])
+
+    # Lithology track
+axes4.plot(["LITHOLOGY"], ['DEPTH_MD'], color="black", linewidth=0.5)
+axes4.set_xlabel("Lithology")
+axes4.set_xlim(0, 1)
+axes4.xaxis.label.set_color("black")
+axes4.tick_params(axis='x', colors="black")
+axes4.spines["top"].set_edgecolor("black")
+
+for key in lithology_numbers.keys():
+        color = lithology_numbers[key]['color']
+        hatch = lithology_numbers[key]['hatch']
+        axes4.fill_betweenx(['DEPTH_MD'], 0, ['LITHOLOGY'], where=(['LITHOLOGY'] == key),
+                          facecolor=color, hatch=hatch)
+
+axes4.set_xticks([0, 1])
+
+    # Common functions for setting up the plot can be extracted into
+    # a for loop. This saves repeating code.
+for axes in [axes1, axes2, axes4]:
+        axes.grid(which='major', color='lightgrey', linestyle='-')
+        axes.xaxis.set_ticks_position("top")
+        axes.xaxis.set_label_position("top")
+        axes.spines["top"].set_position(("axes", 1.02))
+
+for axes in [axes2, axes3, axes4]:
+        plt.setp(axes.get_yticklabels(), visible=False)
+
+plt.tight_layout()
+fig.subplots_adjust(wspace = 0.15)
+
+for key in lithology_numbers.keys():
+    color = lithology_numbers[key]['color']
+    hatch = lithology_numbers[key]['hatch']
+    axes4.fill_betweenx(['DEPTH_MD'], 0, ['LITHOLOGY'], 
+                      where=(['LITHOLOGY']==key),
+                      facecolor=color, hatch=hatch)
+(data, 2600, 3100)
+    
